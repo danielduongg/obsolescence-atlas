@@ -1,0 +1,91 @@
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>obsolescence-atlas — will a robot take this job?</title>
+<style>
+ :root{--bg:#0a0710;--panel:#161020;--panel2:#100b18;--line:#2a2040;--ink:#f1eaff;--mut:#a99cc4;
+   --p1:#ff7b9c;--p2:#b07bff;--p3:#5b8cff;--green:#27d08a;--red:#ff5d6c;--warn:#ffce54;}
+ *{box-sizing:border-box}
+ body{margin:0;background:radial-gradient(1100px 650px at 75% -10%,#2a1640 0%,var(--bg) 55%);color:var(--ink);
+   font:16px/1.55 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Inter,sans-serif;-webkit-font-smoothing:antialiased}
+ .wrap{max-width:920px;margin:0 auto;padding:36px 20px 80px}
+ .eyebrow{letter-spacing:.16em;text-transform:uppercase;font-size:12px;color:var(--p2);font-weight:700}
+ h1{font-size:29px;margin:.25em 0 .15em;line-height:1.15}
+ .sub{color:var(--mut);max-width:66ch}
+ .grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:22px}
+ @media(max-width:780px){.grid{grid-template-columns:1fr}}
+ .card{background:linear-gradient(180deg,var(--panel),var(--panel2));border:1px solid var(--line);border-radius:16px;padding:18px 20px;box-shadow:0 20px 50px -30px #000}
+ select{width:100%;background:#120c1c;color:var(--ink);border:1px solid var(--line);border-radius:9px;padding:10px 12px;font-size:15px}
+ .gauge{margin:13px 0}
+ .gauge .lab{display:flex;justify-content:space-between;font-size:13px;color:var(--mut);margin-bottom:4px}
+ .gauge .lab b{color:var(--ink);font-variant-numeric:tabular-nums}
+ .track{height:13px;background:#120c1c;border:1px solid var(--line);border-radius:999px;overflow:hidden}
+ .fill{height:100%;border-radius:999px}
+ .kpis{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:6px}
+ .kpi{background:#120c1c;border:1px solid var(--line);border-radius:11px;padding:11px;text-align:center}
+ .kpi .k{font-size:11px;color:var(--mut)}.kpi .v{font-size:24px;font-weight:800;font-variant-numeric:tabular-nums}
+ .verdict{margin-top:14px;padding:12px 15px;border-radius:12px;font-size:14.5px;font-weight:600;border:1px solid}
+ svg{width:100%;height:auto;display:block}
+ h2{font-size:14px;margin:4px 0 8px;color:var(--mut);font-weight:600;letter-spacing:.02em;text-transform:uppercase}
+ .note{margin-top:14px;border-left:3px solid var(--warn);background:#1a160c;padding:12px 15px;border-radius:0 10px 10px 0;color:#ecd9b0;font-size:14px}
+ .foot{margin-top:22px;color:var(--mut);font-size:13px;text-align:center}
+ a{color:var(--p2);text-decoration:none}a:hover{text-decoration:underline}
+</style></head><body><div class="wrap">
+ <div class="eyebrow">obsolescence-atlas · live demo</div>
+ <h1>Will a robot take this job?</h1>
+ <p class="sub">Three published forecasts rate every occupation's exposure to automation/AI — Frey–Osborne (2013), Felten's AI Occupational Exposure, and Eloundou's GPT-exposure (2023). Pick a job and see how much <b>they disagree</b>, against what the BLS actually projects for jobs.</p>
+ <div class="grid">
+  <div class="card">
+   <select id="occ"></select>
+   <div class="gauge"><div class="lab"><span>Frey–Osborne automation (2013)</span><b id="vfo"></b></div><div class="track"><div class="fill" id="ffo" style="background:var(--p1)"></div></div></div>
+   <div class="gauge"><div class="lab"><span>Felten AI exposure (AIOE)</span><b id="vai"></b></div><div class="track"><div class="fill" id="fai" style="background:var(--p2)"></div></div></div>
+   <div class="gauge"><div class="lab"><span>Eloundou GPT-exposure (2023)</span><b id="vgpt"></b></div><div class="track"><div class="fill" id="fgpt" style="background:var(--p3)"></div></div></div>
+   <div class="kpis">
+     <div class="kpi"><div class="k">BLS 10-yr jobs outlook</div><div class="v" id="vbls"></div></div>
+     <div class="kpi"><div class="k">Median wage</div><div class="v" id="vwage"></div></div>
+   </div>
+   <div class="verdict" id="verdict"></div>
+  </div>
+  <div class="card">
+   <h2>The forecasters disagree</h2>
+   <svg id="scatter" viewBox="0 0 380 360"></svg>
+   <div style="font-size:12.5px;color:var(--mut);text-align:center">each dot = an occupation · the cloud has almost no slope</div>
+  </div>
+ </div>
+ <div class="note" id="note"></div>
+ <div class="foot">Frey–Osborne 2013 · Felten et al. 2021 · Eloundou et al. 2023 · BLS Employment Projections · <a href="https://github.com/danielduongg/obsolescence-atlas" target="_blank">source &amp; data →</a></div>
+</div>
+<script>
+const M={"occ": [{"name": "Telemarketers", "fo": 0.99, "aioe": 0.9, "gpt": 0.55, "bls": -22, "wage": 30000}, {"name": "Data entry keyers", "fo": 0.99, "aioe": 0.7, "gpt": 0.6, "bls": -25, "wage": 37000}, {"name": "Tax preparers", "fo": 0.99, "aioe": 0.82, "gpt": 0.8, "bls": 2, "wage": 49000}, {"name": "Bookkeeping & accounting clerks", "fo": 0.98, "aioe": 0.78, "gpt": 0.68, "bls": -5, "wage": 47000}, {"name": "Bank tellers", "fo": 0.98, "aioe": 0.75, "gpt": 0.5, "bls": -12, "wage": 38000}, {"name": "Loan officers", "fo": 0.98, "aioe": 0.8, "gpt": 0.6, "bls": 3, "wage": 65000}, {"name": "Insurance underwriters", "fo": 0.99, "aioe": 0.8, "gpt": 0.73, "bls": -4, "wage": 77000}, {"name": "Cashiers", "fo": 0.97, "aioe": 0.35, "gpt": 0.1, "bls": -10, "wage": 29000}, {"name": "Telephone operators", "fo": 0.97, "aioe": 0.8, "gpt": 0.5, "bls": -22, "wage": 39000}, {"name": "Welders", "fo": 0.94, "aioe": 0.28, "gpt": 0.06, "bls": 2, "wage": 48000}, {"name": "Paralegals", "fo": 0.94, "aioe": 0.72, "gpt": 0.69, "bls": 4, "wage": 60000}, {"name": "Accountants & auditors", "fo": 0.94, "aioe": 0.77, "gpt": 0.73, "bls": 4, "wage": 79000}, {"name": "Waiters & waitresses", "fo": 0.94, "aioe": 0.2, "gpt": 0.04, "bls": 3, "wage": 31000}, {"name": "Retail salespersons", "fo": 0.92, "aioe": 0.45, "gpt": 0.25, "bls": 1, "wage": 34000}, {"name": "Taxi & ride-share drivers", "fo": 0.89, "aioe": 0.32, "gpt": 0.08, "bls": 6, "wage": 34000}, {"name": "Technical writers", "fo": 0.89, "aioe": 0.82, "gpt": 0.85, "bls": 7, "wage": 80000}, {"name": "Real estate agents", "fo": 0.86, "aioe": 0.7, "gpt": 0.55, "bls": 3, "wage": 52000}, {"name": "Proofreaders", "fo": 0.84, "aioe": 0.85, "gpt": 0.85, "bls": -3, "wage": 48000}, {"name": "Graphic designers", "fo": 0.82, "aioe": 0.65, "gpt": 0.5, "bls": 3, "wage": 58000}, {"name": "Cooks, fast food", "fo": 0.81, "aioe": 0.25, "gpt": 0.05, "bls": 5, "wage": 29000}, {"name": "Truck drivers, heavy", "fo": 0.79, "aioe": 0.3, "gpt": 0.07, "bls": 4, "wage": 50000}, {"name": "Carpenters", "fo": 0.72, "aioe": 0.26, "gpt": 0.06, "bls": 2, "wage": 56000}, {"name": "HVAC technicians", "fo": 0.65, "aioe": 0.3, "gpt": 0.08, "bls": 6, "wage": 57000}, {"name": "Market research analysts", "fo": 0.61, "aioe": 0.8, "gpt": 0.77, "bls": 13, "wage": 74000}, {"name": "Customer service reps", "fo": 0.55, "aioe": 0.75, "gpt": 0.6, "bls": -5, "wage": 39000}, {"name": "Computer programmers", "fo": 0.48, "aioe": 0.76, "gpt": 0.68, "bls": -11, "wage": 99000}, {"name": "Mathematicians", "fo": 0.47, "aioe": 0.82, "gpt": 0.85, "bls": 30, "wage": 112000}, {"name": "Software developers", "fo": 0.42, "aioe": 0.78, "gpt": 0.62, "bls": 25, "wage": 130000}, {"name": "Interpreters & translators", "fo": 0.38, "aioe": 0.88, "gpt": 0.76, "bls": 20, "wage": 57000}, {"name": "Plumbers", "fo": 0.35, "aioe": 0.28, "gpt": 0.07, "bls": 2, "wage": 61000}, {"name": "Financial analysts", "fo": 0.23, "aioe": 0.78, "gpt": 0.75, "bls": 8, "wage": 96000}, {"name": "Web developers", "fo": 0.21, "aioe": 0.72, "gpt": 0.6, "bls": 16, "wage": 84000}, {"name": "Public relations specialists", "fo": 0.18, "aioe": 0.8, "gpt": 0.87, "bls": 6, "wage": 67000}, {"name": "Electricians", "fo": 0.15, "aioe": 0.3, "gpt": 0.08, "bls": 6, "wage": 61000}, {"name": "Chefs & head cooks", "fo": 0.1, "aioe": 0.3, "gpt": 0.08, "bls": 5, "wage": 58000}, {"name": "Hairdressers", "fo": 0.11, "aioe": 0.3, "gpt": 0.07, "bls": 8, "wage": 35000}, {"name": "Childcare workers", "fo": 0.08, "aioe": 0.35, "gpt": 0.1, "bls": 4, "wage": 30000}, {"name": "Lawyers", "fo": 0.035, "aioe": 0.7, "gpt": 0.63, "bls": 8, "wage": 135000}, {"name": "Writers & authors", "fo": 0.04, "aioe": 0.8, "gpt": 0.82, "bls": 4, "wage": 73000}, {"name": "Physical therapists", "fo": 0.021, "aioe": 0.45, "gpt": 0.25, "bls": 15, "wage": 99000}, {"name": "Pharmacists", "fo": 0.012, "aioe": 0.68, "gpt": 0.55, "bls": 3, "wage": 133000}, {"name": "Registered nurses", "fo": 0.009, "aioe": 0.5, "gpt": 0.29, "bls": 6, "wage": 86000}, {"name": "Clergy", "fo": 0.008, "aioe": 0.5, "gpt": 0.45, "bls": 2, "wage": 58000}, {"name": "Secondary school teachers", "fo": 0.0078, "aioe": 0.55, "gpt": 0.43, "bls": 1, "wage": 64000}, {"name": "Nurse practitioners", "fo": 0.005, "aioe": 0.58, "gpt": 0.4, "bls": 45, "wage": 126000}, {"name": "Athletes & sports competitors", "fo": 0.005, "aioe": 0.25, "gpt": 0.03, "bls": 12, "wage": 70000}, {"name": "Dentists", "fo": 0.004, "aioe": 0.52, "gpt": 0.36, "bls": 4, "wage": 170000}, {"name": "Physicians & surgeons", "fo": 0.0042, "aioe": 0.55, "gpt": 0.35, "bls": 3, "wage": 230000}, {"name": "Recreational therapists", "fo": 0.0028, "aioe": 0.4, "gpt": 0.2, "bls": 4, "wage": 57000}], "corr": {"fo_gpt": 0.15, "fo_aioe": 0.2, "aioe_gpt": 0.96}};const OCC=M.occ.slice().sort((a,b)=>a.name.localeCompare(b.name));
+const sel=document.getElementById('occ');
+OCC.forEach((o,i)=>{const e=document.createElement('option');e.value=i;e.textContent=o.name;sel.appendChild(e);});
+function drawScatter(cur){
+  const W=380,H=360,pad=40;const xs=v=>pad+v*(W-pad-12);const ys=v=>H-pad-v*(H-pad-12);
+  let s=`<line x1="${pad}" y1="${H-pad}" x2="${W-12}" y2="${H-pad}" style="stroke:#2a2040"/><line x1="${pad}" y1="12" x2="${pad}" y2="${H-pad}" style="stroke:#2a2040"/>`;
+  s+=`<text x="${(W+pad)/2}" y="${H-10}" fill="#a99cc4" font-size="11" text-anchor="middle">Frey–Osborne automation →</text>`;
+  s+=`<text x="14" y="${(H-pad)/2}" fill="#a99cc4" font-size="11" text-anchor="middle" transform="rotate(-90 14 ${(H-pad)/2})">GPT-exposure →</text>`;
+  OCC.forEach(o=>{const isC=o.name===cur.name;s+=`<circle cx="${xs(o.fo).toFixed(1)}" cy="${ys(o.gpt).toFixed(1)}" r="${isC?6:3.2}" fill="${isC?'#ffce54':'#b07bff'}" opacity="${isC?1:0.55}"${isC?' stroke="#fff" stroke-width="1.5"':''}/>`;});
+  s+=`<text x="${W-12}" y="20" fill="#ffce54" font-size="11" text-anchor="end">r = ${M.corr.fo_gpt.toFixed(2)} (≈ none)</text>`;
+  document.getElementById('scatter').innerHTML=s;
+}
+function render(){
+  const o=OCC[+sel.value];
+  const set=(idf,idv,val)=>{document.getElementById(idf).style.width=(val*100)+'%';document.getElementById(idv).textContent=Math.round(val*100)+'%';};
+  set('ffo','vfo',o.fo);set('fai','vai',o.aioe);set('fgpt','vgpt',o.gpt);
+  document.getElementById('vbls').textContent=(o.bls>=0?'+':'')+o.bls+'%';
+  document.getElementById('vbls').style.color=o.bls>=5?'var(--green)':o.bls<=-5?'var(--red)':'var(--warn)';
+  document.getElementById('vwage').textContent='$'+(o.wage/1000).toFixed(0)+'k';
+  const me=Math.max(o.fo,o.gpt);const v=document.getElementById('verdict');
+  let txt,cls,col;
+  if(o.bls<=-5&&me>0.6){txt='🔴 Fading — high exposure <i>and</i> the BLS projects the workforce shrinking.';col='#2a121a';}
+  else if(me>0.6&&o.bls>=5){txt='🟡 Exposed but growing — high AI exposure, yet projected demand is rising. Exposure ≠ replacement.';col='#1a160c';}
+  else if(me<0.35){txt='🟢 Robot-proof (for now) — low exposure on every measure.';col='#0f2a20';}
+  else{txt='🟠 Contested — the measures disagree or exposure is moderate.';col='#1a1228';}
+  const disagree=Math.abs(o.fo-o.gpt)>0.4;
+  v.style.background=col;v.style.borderColor='#3a2f55';v.innerHTML=txt+(disagree?` <br><span style="font-weight:400;color:var(--mut)">Note: the 2013 automation forecast and the 2023 LLM forecast <b>strongly disagree</b> about this job (${Math.round(o.fo*100)}% vs ${Math.round(o.gpt*100)}%).</span>`:'');
+  drawScatter(o);
+}
+sel.addEventListener('change',render);
+const startIdx=OCC.findIndex(o=>o.name==='Welders');sel.value=startIdx<0?0:startIdx;
+document.getElementById('note').innerHTML=`<b>The honest finding.</b> Frey–Osborne (2013) and GPT-exposure (2023) correlate just <b>r=${M.corr.fo_gpt.toFixed(2)}</b> — practically unrelated. The old automation lens points at <b>manual/routine</b> jobs (welders, cashiers, drivers); the LLM lens points at <b>cognitive/writing</b> jobs (writers, analysts, paralegals). The two AI-era measures agree with each other (r=${M.corr.aioe_gpt.toFixed(2)}) but not with 2013. And "exposure" was never "replacement": many high-exposure jobs are still <i>growing</i>. Forecasting which trades vanish is far less certain than headlines imply.`;
+render();
+</script></body></html>

@@ -1,0 +1,8 @@
+{
+  "correlations": {
+    "fo_gpt": 0.15,
+    "fo_aioe": 0.2,
+    "aioe_gpt": 0.96
+  },
+  "n": 49
+}
