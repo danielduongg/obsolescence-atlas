@@ -30,6 +30,8 @@ HTML=r'''<!DOCTYPE html><html lang="en"><head>
  .kpis{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:6px}
  .kpi{background:#120c1c;border:1px solid var(--line);border-radius:11px;padding:11px;text-align:center}
  .kpi .k{font-size:11px;color:var(--mut)}.kpi .v{font-size:24px;font-weight:800;font-variant-numeric:tabular-nums}
+ .pz{font-size:12px;border:1px solid var(--line);background:#120c1c;color:var(--mut);padding:5px 10px;border-radius:999px;cursor:pointer}
+ .pz.on{border-color:var(--p2);color:#fff;background:#241a3a}
  .verdict{margin-top:14px;padding:12px 15px;border-radius:12px;font-size:14.5px;font-weight:600;border:1px solid}
  svg{width:100%;height:auto;display:block}
  h2{font-size:14px;margin:4px 0 8px;color:var(--mut);font-weight:600;letter-spacing:.02em;text-transform:uppercase}
@@ -54,8 +56,13 @@ HTML=r'''<!DOCTYPE html><html lang="en"><head>
   </div>
   <div class="card">
    <h2>The forecasters disagree</h2>
-   <svg id="scatter" viewBox="0 0 380 360"></svg>
-   <div style="font-size:12.5px;color:var(--mut);text-align:center">each dot = an occupation · the cloud has almost no slope</div>
+   <div style="display:flex;gap:6px;margin-bottom:8px"><span class="pz" id="mFO">x: Frey–Osborne</span><span class="pz" id="mWage">x: median wage</span></div>
+   <svg id="scatter" viewBox="0 0 380 320"></svg>
+   <div style="font-size:12.5px;color:var(--mut);text-align:center" id="scatcap">each dot = an occupation · the cloud has almost no slope</div>
+   <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px">
+     <div><div style="font-size:12px;color:var(--mut);margin-bottom:5px">Most GPT-exposed</div><div id="rankTop" style="font-size:12.5px"></div></div>
+     <div><div style="font-size:12px;color:var(--mut);margin-bottom:5px">Exposed &amp; shrinking (BLS)</div><div id="rankFade" style="font-size:12.5px"></div></div>
+   </div>
   </div>
  </div>
  <div class="note" id="note"></div>
@@ -65,13 +72,17 @@ HTML=r'''<!DOCTYPE html><html lang="en"><head>
 const M=__BLOB__;const OCC=M.occ.slice().sort((a,b)=>a.name.localeCompare(b.name));
 const sel=document.getElementById('occ');
 OCC.forEach((o,i)=>{const e=document.createElement('option');e.value=i;e.textContent=o.name;sel.appendChild(e);});
+let smode='fo';
 function drawScatter(cur){
-  const W=380,H=360,pad=40;const xs=v=>pad+v*(W-pad-12);const ys=v=>H-pad-v*(H-pad-12);
+  const W=380,H=320,pad=40;
+  const xVal=o=>smode==='fo'?o.fo:(o.wage/200000);
+  const xlab=smode==='fo'?'Frey–Osborne automation →':'median wage →';
+  const xs=v=>pad+v*(W-pad-12);const ys=v=>H-pad-v*(H-pad-12);
   let s=`<line x1="${pad}" y1="${H-pad}" x2="${W-12}" y2="${H-pad}" style="stroke:#2a2040"/><line x1="${pad}" y1="12" x2="${pad}" y2="${H-pad}" style="stroke:#2a2040"/>`;
-  s+=`<text x="${(W+pad)/2}" y="${H-10}" fill="#a99cc4" font-size="11" text-anchor="middle">Frey–Osborne automation →</text>`;
+  s+=`<text x="${(W+pad)/2}" y="${H-10}" fill="#a99cc4" font-size="11" text-anchor="middle">${xlab}</text>`;
   s+=`<text x="14" y="${(H-pad)/2}" fill="#a99cc4" font-size="11" text-anchor="middle" transform="rotate(-90 14 ${(H-pad)/2})">GPT-exposure →</text>`;
-  OCC.forEach(o=>{const isC=o.name===cur.name;s+=`<circle cx="${xs(o.fo).toFixed(1)}" cy="${ys(o.gpt).toFixed(1)}" r="${isC?6:3.2}" fill="${isC?'#ffce54':'#b07bff'}" opacity="${isC?1:0.55}"${isC?' stroke="#fff" stroke-width="1.5"':''}/>`;});
-  s+=`<text x="${W-12}" y="20" fill="#ffce54" font-size="11" text-anchor="end">r = ${M.corr.fo_gpt.toFixed(2)} (≈ none)</text>`;
+  OCC.forEach(o=>{const isC=o.name===cur.name;s+=`<circle cx="${xs(xVal(o)).toFixed(1)}" cy="${ys(o.gpt).toFixed(1)}" r="${isC?6:3.2}" fill="${isC?'#ffce54':'#b07bff'}" opacity="${isC?1:0.55}"${isC?' stroke="#fff" stroke-width="1.5"':''}/>`;});
+  if(smode==='fo') s+=`<text x="${W-12}" y="20" fill="#ffce54" font-size="11" text-anchor="end">r = ${M.corr.fo_gpt.toFixed(2)} (≈ none)</text>`;
   document.getElementById('scatter').innerHTML=s;
 }
 function render(){
@@ -94,6 +105,18 @@ function render(){
 sel.addEventListener('change',render);
 const startIdx=OCC.findIndex(o=>o.name==='Welders');sel.value=startIdx<0?0:startIdx;
 document.getElementById('note').innerHTML=`<b>The honest finding.</b> Frey–Osborne (2013) and GPT-exposure (2023) correlate just <b>r=${M.corr.fo_gpt.toFixed(2)}</b> — practically unrelated. The old automation lens points at <b>manual/routine</b> jobs (welders, cashiers, drivers); the LLM lens points at <b>cognitive/writing</b> jobs (writers, analysts, paralegals). The two AI-era measures agree with each other (r=${M.corr.aioe_gpt.toFixed(2)}) but not with 2013. And "exposure" was never "replacement": many high-exposure jobs are still <i>growing</i>. Forecasting which trades vanish is far less certain than headlines imply.`;
+
+function rankings(){
+  const top=[...OCC].sort((a,b)=>b.gpt-a.gpt).slice(0,6);
+  const fade=[...OCC].filter(o=>o.bls<0).sort((a,b)=>Math.max(b.fo,b.gpt)-Math.max(a.fo,a.gpt)).slice(0,6);
+  const row=o=>`<div style="display:flex;justify-content:space-between;color:var(--mut);padding:2px 0"><span style="color:#e9e2ff">${o.name.split(' (')[0].slice(0,22)}</span><span>${Math.round(o.gpt*100)}%</span></div>`;
+  document.getElementById('rankTop').innerHTML=top.map(row).join('');
+  document.getElementById('rankFade').innerHTML=fade.map(o=>`<div style="display:flex;justify-content:space-between;color:var(--mut);padding:2px 0"><span style="color:#e9e2ff">${o.name.split(' (')[0].slice(0,20)}</span><span style="color:var(--red)">${o.bls}%</span></div>`).join('');
+}
+document.getElementById('mFO').onclick=()=>{smode='fo';document.getElementById('mFO').className='pz on';document.getElementById('mWage').className='pz';render();};
+document.getElementById('mWage').onclick=()=>{smode='wage';document.getElementById('mWage').className='pz on';document.getElementById('mFO').className='pz';render();};
+document.getElementById('mFO').className='pz on';
+rankings();
 render();
 </script></body></html>'''
 open("index.html","w").write(HTML.replace("__BLOB__",BLOB))
